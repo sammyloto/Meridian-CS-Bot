@@ -5,3 +5,9 @@ __pycache__/
 .env
 .DS_Store
 .streamlit/secrets.toml
+
+# Local / deploy-specific copies (keep tracked: ARCHITECTURE.md, MCP_TOOLS.md)
+documentation/DEMO_SCRIPT.md
+documentation/HF_DEPLOY.md
+documentation/PROJECT_BRIEF.md
+documentation/VIDEO_SUBMISSION.md

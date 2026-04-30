@@ -141,16 +141,16 @@ def _render_sidebar_auth_and_profile(
             f"<strong>{safe_name}</strong>",
             unsafe_allow_html=True,
         )
-        st.caption("Orders (from Meridian)")
-        try:
-            orders_text = _cached_list_orders_text(mcp_server_url, cid)
-        except MCPClientError:
-            st.warning("Could not load orders right now.")
-        else:
-            snippet = orders_text.strip()
-            if len(snippet) > 1200:
-                snippet = snippet[:1200] + "\n…"
-            st.code(snippet or "No orders returned.", language=None)
+        with st.expander("Current orders", expanded=False):
+            try:
+                orders_text = _cached_list_orders_text(mcp_server_url, cid)
+            except MCPClientError:
+                st.warning("Could not load orders right now.")
+            else:
+                snippet = orders_text.strip()
+                if len(snippet) > 1200:
+                    snippet = snippet[:1200] + "\n…"
+                st.code(snippet or "No orders returned.", language=None)
     else:
         st.info("Sign in with email and PIN above. Do not send your PIN in the chat box.")
 
