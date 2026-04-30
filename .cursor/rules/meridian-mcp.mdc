@@ -1,0 +1,9 @@
+---
+description: Meridian CS bot — MCP-backed facts only
+globs: "*.py"
+---
+
+- For **inventory, prices, stock, customers, and orders**, always use MCP tools (`order-mcp`). Never invent SKUs, prices, or order IDs.
+- Before **`create_order`**, call **`get_product`** for each line item to obtain current `unit_price` and validate stock.
+- Prefer **`verify_customer_pin`** before **`list_orders`** or **`create_order`** for returning customers.
+- Handle MCP and LLM errors with clear user messages; do not leak raw stack traces in the Streamlit UI.
