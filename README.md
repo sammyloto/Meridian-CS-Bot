@@ -21,7 +21,7 @@ Streamlit chatbot that answers Meridian Electronics customer questions using **O
 
 ## Architecture
 
-Flow: **Streamlit** (`app.py` → `src/ui/streamlit_app.py`) loads settings, bootstraps **`OrderMCPClient`** + OpenAI tool definitions (`src/ui/bootstrap.py`), and runs **`run_agent_turn`** (`src/agent/chat_agent.py`). The agent calls **OpenAI** with MCP-backed tools; each **`tools/call`** goes through **`src/mcp/client.py`**. Product tool text is enriched (icons, description/link formatting) before it is returned to the model; the final assistant reply can be augmented with icons using recent tool bodies. Session **`verified_customer_id`** (set from sidebar verify) constrains order tools via **`apply_verified_customer_scope`** in `src/agent/tool_policy.py`. Errors surface as **`MCPError`**, **`MCPConnectionError`**, **`MCPClientError`**, or **`LLMProviderError`** (`src/exceptions.py`) and are formatted in **`src/ui/error_presenter.py`**.
+Flow: **Streamlit** (`app.py` → `src/ui/streamlit_app.py`) calls **`prepare_langfuse_env()`**, loads settings, bootstraps **`OrderMCPClient`** + OpenAI tool definitions (`src/ui/bootstrap.py`), builds the OpenAI client via **`create_openai_client()`** (Langfuse-wrapped when Langfuse keys are set), and runs **`run_agent_turn`** (`src/agent/chat_agent.py`). The agent calls **OpenAI** with MCP-backed tools; each **`tools/call`** goes through **`src/mcp/client.py`** (optional Langfuse **tool** spans). Product tool text is enriched (icons, description/link formatting) before it is returned to the model; the final assistant reply can be augmented with icons using recent tool bodies. Session **`verified_customer_id`** (set from sidebar verify) constrains order tools via **`apply_verified_customer_scope`** in `src/agent/tool_policy.py`. Errors surface as **`MCPError`**, **`MCPConnectionError`**, **`MCPClientError`**, or **`LLMProviderError`** (`src/exceptions.py`) and are formatted in **`src/ui/error_presenter.py`**.
 
 ```mermaid
 flowchart LR
@@ -68,20 +68,15 @@ Copy [.env.example](.env.example) for variable names and defaults. Use Hugging F
 | `src/mcp/` | MCP JSON-RPC client |
 | `src/agent/` | Tool schema, policy, chat loop, product formatting |
 | `src/ui/` | Streamlit UI, bootstrap, error copy |
+| `src/observability/` | Langfuse env handling, OpenAI client factory, MCP span helper |
 | `src/exceptions.py` | Typed errors by layer |
 
 ## Docs
 
 | Doc | Purpose |
 |-----|---------|
-| [PROJECT_BRIEF.md](documentation/PROJECT_BRIEF.md) | Goals and constraints (local; see .gitignore) |
 | [ARCHITECTURE.md](documentation/ARCHITECTURE.md) | Components and data flow |
 | [MCP_TOOLS.md](documentation/MCP_TOOLS.md) | Tool reference and guardrails |
-| [HF_DEPLOY.md](documentation/HF_DEPLOY.md) | Hugging Face Spaces deployment (local; see .gitignore) |
-| [DEMO_SCRIPT.md](documentation/DEMO_SCRIPT.md) | Live demo scenarios (local; see .gitignore) |
-| [VIDEO_SUBMISSION.md](documentation/VIDEO_SUBMISSION.md) | Video checklists (local; see .gitignore) |
-
-Tracked in git: **ARCHITECTURE.md** and **MCP_TOOLS.md**. The other four paths exist for local/HF workflows but are listed in `.gitignore` and are not committed.
 
 ## Tests
 
@@ -96,6 +91,11 @@ pytest -q
 | `OPENAI_API_KEY` | Yes | — |
 | `MCP_SERVER_URL` | No | `https://order-mcp-74afyau24q-uc.a.run.app/mcp` |
 | `OPENAI_MODEL` | No | `gpt-4o-mini` |
+| `LANGFUSE_PUBLIC_KEY` | No | Omit (with secret) to disable tracing |
+| `LANGFUSE_SECRET_KEY` | No | Omit (with public key) to disable tracing |
+| `LANGFUSE_HOST` or `LANGFUSE_BASE_URL` | No | Langfuse API base URL (e.g. EU / self-hosted); SDK defaults apply |
+
+Set **both** Langfuse keys to enable traces; the app behaves unchanged if either is missing.
 
 ## License
 

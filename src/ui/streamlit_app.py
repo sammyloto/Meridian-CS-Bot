@@ -6,7 +6,6 @@ import copy
 import html
 
 import streamlit as st
-from openai import OpenAI
 
 from src.agent import build_initial_messages, run_agent_turn
 from src.agent.tool_policy import (
@@ -18,6 +17,7 @@ from src.config.settings import Settings
 from src.config.ui_icons import LUCIDE_USER_ICON_URL
 from src.exceptions import MCPClientError, MCPError
 from src.mcp.client import OrderMCPClient
+from src.observability.langfuse_integration import create_openai_client, prepare_langfuse_env
 from src.ui.bootstrap import create_mcp_client_and_openai_tools
 from src.ui.error_presenter import format_chat_turn_error, format_mcp_startup_error
 
@@ -160,6 +160,7 @@ def _render_sidebar_auth_and_profile(
 
 
 def main() -> None:
+    prepare_langfuse_env()
     st.set_page_config(page_title="Meridian Support", page_icon="🛒", layout="centered")
     settings = Settings.from_env()
     config_errors = settings.validate()
@@ -186,7 +187,7 @@ def main() -> None:
     with st.sidebar:
         _render_sidebar_auth_and_profile(mcp=mcp, mcp_server_url=settings.mcp_server_url)
 
-    openai_client = OpenAI(api_key=settings.openai_api_key)
+    openai_client = create_openai_client(api_key=settings.openai_api_key)
 
     _display_messages()
 

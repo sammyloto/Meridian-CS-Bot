@@ -42,6 +42,16 @@ flowchart LR
 
 **Agent path:** When the model calls `verify_customer_pin` inside the tool loop, the agent still parses the tool result and updates the in-memory `active_customer_id` for the rest of that turn. `list_orders` / `create_order` arguments are **scoped** to `verified_customer_id` from session when present.
 
+## Observability (Langfuse)
+
+Optional **Langfuse** tracing when **`LANGFUSE_PUBLIC_KEY`** and **`LANGFUSE_SECRET_KEY`** are both set (see SDK env vars). If either is missing, behavior matches the non-Langfuse path.
+
+- **`prepare_langfuse_env()`** (`src/observability/langfuse_integration.py`): maps **`LANGFUSE_HOST`** → **`LANGFUSE_BASE_URL`** when the latter is unset (self-hosted / regional endpoints).
+- **OpenAI:** `create_openai_client()` returns **`langfuse.openai.OpenAI`** when tracing is enabled, otherwise the stock **`openai.OpenAI`** client — chat completions and tool calls are traced automatically by the wrapper.
+- **MCP:** `OrderMCPClient.call_tool` wraps each tool invocation in **`Langfuse.start_as_current_observation(..., as_type="tool")`** with redacted arguments (`pin` never sent). Tool outputs are truncated before export.
+
+Do not commit Langfuse keys; use environment or HF secrets only.
+
 ## Error handling
 
 - **HTTP / network / bad JSON** from MCP → `MCPConnectionError` (extends `MCPError`).

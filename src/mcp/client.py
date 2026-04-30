@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 
 from src.exceptions import MCPClientError, MCPConnectionError
+from src.observability.langfuse_integration import trace_mcp_tool_call
 
 
 class OrderMCPClient:
@@ -94,30 +95,33 @@ class OrderMCPClient:
         return tools
 
     def call_tool(self, name: str, arguments: dict[str, Any] | None) -> str:
-        self.connect()
-        rid = next(self._rpc_id)
-        resp = self._post(
-            {
-                "jsonrpc": "2.0",
-                "id": rid,
-                "method": "tools/call",
-                "params": {"name": name, "arguments": arguments or {}},
-            }
-        )
-        if not resp or "error" in resp:
-            err = resp.get("error") if resp else "empty tools/call response"
-            if isinstance(err, dict):
-                raise MCPClientError(err.get("message", str(err)))
-            raise MCPClientError(str(err))
-        result = resp.get("result") or {}
-        if result.get("isError"):
-            parts: list[str] = []
+        def _execute() -> str:
+            self.connect()
+            rid = next(self._rpc_id)
+            resp = self._post(
+                {
+                    "jsonrpc": "2.0",
+                    "id": rid,
+                    "method": "tools/call",
+                    "params": {"name": name, "arguments": arguments or {}},
+                }
+            )
+            if not resp or "error" in resp:
+                err = resp.get("error") if resp else "empty tools/call response"
+                if isinstance(err, dict):
+                    raise MCPClientError(err.get("message", str(err)))
+                raise MCPClientError(str(err))
+            result = resp.get("result") or {}
+            if result.get("isError"):
+                parts: list[str] = []
+                for block in result.get("content", []):
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        parts.append(str(block.get("text", "")))
+                raise MCPClientError("\n".join(parts).strip() or "Tool returned an error.")
+            texts: list[str] = []
             for block in result.get("content", []):
                 if isinstance(block, dict) and block.get("type") == "text":
-                    parts.append(str(block.get("text", "")))
-            raise MCPClientError("\n".join(parts).strip() or "Tool returned an error.")
-        texts: list[str] = []
-        for block in result.get("content", []):
-            if isinstance(block, dict) and block.get("type") == "text":
-                texts.append(str(block.get("text", "")))
-        return "\n".join(texts).strip()
+                    texts.append(str(block.get("text", "")))
+            return "\n".join(texts).strip()
+
+        return trace_mcp_tool_call(name, arguments, _execute)
