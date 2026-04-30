@@ -6,6 +6,7 @@ from typing import Any
 
 from openai import APIConnectionError, APIError, APITimeoutError, OpenAI, RateLimitError
 
+from src.agent.product_detail_format import append_product_detail_formatting
 from src.agent.product_icon_enricher import (
     augment_assistant_reply_with_icons,
     enrich_product_tool_result,
@@ -83,6 +84,7 @@ def run_agent_turn(
                 tool_text = f"MCP error ({name}): {exc}"
             else:
                 tool_text = enrich_product_tool_result(name, tool_text)
+                tool_text = append_product_detail_formatting(name, tool_text)
             if name == "verify_customer_pin" and not tool_text.lower().startswith("mcp error"):
                 extracted = extract_customer_id_from_verify_response(tool_text)
                 if extracted:

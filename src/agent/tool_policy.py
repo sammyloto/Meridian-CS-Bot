@@ -22,6 +22,27 @@ def parse_tool_arguments_json(raw: str) -> dict[str, Any]:
         return {}
 
 
+def extract_customer_name_from_verify_response(text: str) -> str | None:
+    """Best-effort parse of customer display name from verify_customer_pin tool text."""
+    for line in text.splitlines():
+        raw = line.strip()
+        if not raw:
+            continue
+        lower = raw.lower()
+        for prefix in ("name:", "full name:", "customer name:", "display name:"):
+            if lower.startswith(prefix):
+                val = raw.split(":", 1)[-1].strip()
+                return val or None
+    return None
+
+
+def extract_customer_name_from_get_customer_response(text: str) -> str | None:
+    """Parse get_customer MCP text for a human-readable name."""
+    if "not found" in text.lower() or text.lower().startswith("mcp error"):
+        return None
+    return extract_customer_name_from_verify_response(text)
+
+
 def extract_customer_id_from_verify_response(text: str) -> str | None:
     for line in text.splitlines():
         lower = line.lower()
